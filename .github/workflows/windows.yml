@@ -17,13 +17,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
-
-      - name: Set Russian Locale
-        run: |
-          Set-WinSystemLocale ru-RU; Set-Culture ru-RU; Set-WinUserLanguageList ru-RU -Force
-          [System.Threading.Thread]::CurrentThread.CurrentCulture = 'ru-RU'
-          [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'ru-RU'
-        shell: pwsh
         
       - name: Disable Firewall
         run: |
