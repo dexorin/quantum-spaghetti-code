@@ -11,27 +11,17 @@ on:
         required: true
 
 jobs:
-  setup-and-install:
+  setup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Create CRD User
+      - name: Dependencies
         run: |
-          sudo adduser --disabled-password --gecos "" crduser
-          echo "crduser:crdpassword" | sudo chpasswd
-          sudo usermod -aG sudo crduser
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget curl gdebi-core
-
-      - name: Install LXDE-core
-        run: |
-          sudo apt-get install -y lxde-core
+          sudo apt update
+          sudo apt install -y lxde-core wget curl gdebi-core
 
       - name: Install Chrome Remote Desktop
         run: |
@@ -39,17 +29,13 @@ jobs:
           sudo gdebi -n chrome-remote-desktop_current_amd64.deb
           rm chrome-remote-desktop_current_amd64.deb
 
-      - name: Add CRD User To Group
-        run: |
-          sudo usermod -aG chrome-remote-desktop crduser
-
-      - name: Configure CRD
-        run: |
-          sudo -u crduser bash -c '${{ github.event.inputs.authcode }} --pin=${{ github.event.inputs.pincode }}'
-
-      - name: Set LXDE Session
+      - name: Configure CRD session
         run: |
           echo "exec startlxde" | sudo tee /etc/chrome-remote-desktop-session
 
-      - name: Keep Alive
+      - name: Register CRD on runner user
+        run: |
+          ${{ github.event.inputs.authcode }} --pin=${{ github.event.inputs.pincode }}
+
+      - name: Keep alive
         run: sleep $((6 * 3600))
