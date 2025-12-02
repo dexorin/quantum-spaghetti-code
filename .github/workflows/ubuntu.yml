@@ -1,0 +1,59 @@
+name: Launch Linux (Ubuntu) Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      authcode:
+        description: "Authorization link"
+        required: true
+      pincode:
+        description: "6-digit PIN code"
+        required: true
+
+jobs:
+  setup-and-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Update system and install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget curl gdebi-core
+
+      - name: Install XFCE4 (without xfce4-goodies)
+        run: |
+          sudo apt-get install -y xfce4
+          echo "XFCE4 installed."
+
+      - name: Install Chrome Remote Desktop (Linux)
+        run: |
+          wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+          sudo gdebi -n chrome-remote-desktop_current_amd64.deb
+          rm chrome-remote-desktop_current_amd64.deb
+          echo "CRD installed."
+
+      - name: Add CRD service permissions
+        run: |
+          sudo usermod -a -G chrome-remote-desktop $USER
+          sudo systemctl enable chrome-remote-desktop
+
+      - name: Configure Chrome Remote Desktop
+        run: |
+          # Register the host
+          ${{
+            github.event.inputs.authcode
+          }} --pin=${{ github.event.inputs.pincode }}
+
+          echo "CRD configured."
+
+      - name: Set XFCE as default CRD session
+        run: |
+          sudo bash -c 'echo "exec /usr/bin/xfce4-session" > /etc/chrome-remote-desktop-session'
+          sudo systemctl restart chrome-remote-desktop
+          echo "XFCE CRD session configured."
+
+      - name: Keep Session Alive (6 hours)
+        run: sleep $((6 * 3600))
