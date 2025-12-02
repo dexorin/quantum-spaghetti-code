@@ -1,4 +1,4 @@
-name: Launch Linux (Ubuntu) Workflow
+name: Launch Linux Workflow
 
 on:
   workflow_dispatch:
@@ -18,42 +18,38 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Update system and install dependencies
+      - name: Create CRD User
+        run: |
+          sudo adduser --disabled-password --gecos "" crduser
+          echo "crduser:crdpassword" | sudo chpasswd
+          sudo usermod -aG sudo crduser
+
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y wget curl gdebi-core
 
-      - name: Install XFCE4 (without xfce4-goodies)
+      - name: Install LXDE-core
         run: |
-          sudo apt-get install -y xfce4
-          echo "XFCE4 installed."
+          sudo apt-get install -y lxde-core
 
-      - name: Install Chrome Remote Desktop (Linux)
+      - name: Install Chrome Remote Desktop
         run: |
           wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
           sudo gdebi -n chrome-remote-desktop_current_amd64.deb
           rm chrome-remote-desktop_current_amd64.deb
-          echo "CRD installed."
 
-      - name: Add CRD service permissions
+      - name: Add CRD User To Group
         run: |
-          sudo usermod -a -G chrome-remote-desktop $USER
-          sudo systemctl enable chrome-remote-desktop
+          sudo usermod -aG chrome-remote-desktop crduser
 
-      - name: Configure Chrome Remote Desktop
+      - name: Configure CRD
         run: |
-          # Register the host
-          ${{
-            github.event.inputs.authcode
-          }} --pin=${{ github.event.inputs.pincode }}
+          sudo -u crduser bash -c '${{ github.event.inputs.authcode }} --pin=${{ github.event.inputs.pincode }}'
 
-          echo "CRD configured."
-
-      - name: Set XFCE as default CRD session
+      - name: Set LXDE Session
         run: |
-          sudo bash -c 'echo "exec /usr/bin/xfce4-session" > /etc/chrome-remote-desktop-session'
-          sudo systemctl restart chrome-remote-desktop
-          echo "XFCE CRD session configured."
+          echo "exec startlxde" | sudo tee /etc/chrome-remote-desktop-session
 
-      - name: Keep Session Alive (6 hours)
+      - name: Keep Alive
         run: sleep $((6 * 3600))
